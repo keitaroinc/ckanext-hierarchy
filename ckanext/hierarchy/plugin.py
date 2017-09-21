@@ -83,48 +83,51 @@ class HierarchyDisplay(p.SingletonPlugin):
             return name_list
 
         query = search_params.get('q', None)
-        c.include_children_selected = False
+        fq = search_params.get('fq', None)
 
-        # fix the issues with multiple times repeated fields
-        # remove the param from the fields
-        new_fields = set()
-        for field,value in c.fields:
-            if (field != 'include_children'):
-                new_fields.add((field,value))
-        c.fields = list(new_fields)
+        if fq is not None:
+            c.include_children_selected = False
 
-        # parse the query string to check if children are requested
-        if query:
-            base_query = []
-            #  remove whitespaces between fields and values
-            query = re.sub(': +', ':',  query)
-            for item in query.split(' '):
-                field = item.split(':')[0]
-                value = item.split(':')[-1]
-                # skip organization 
-                if (field == 'owner_org'):
-                    org_id = value
-                    continue
-                # skip include children andset option value
-                if (field == 'include_children'):
-                    if (value.upper() != "FALSE"):
-                        c.include_children_selected = True
-                    continue
-                base_query += [item]
-        if c.include_children_selected:
-            # add all the children organizations in an 'or' join
-            children = _children_name_list(helpers.group_tree_section(c.group_dict.get('id'), include_parents=False, include_siblings=False).get('children',[]))
-            if(children):
-                search_params['q'] = " ".join(base_query)
-                if (len(search_params['q'].strip())>0):
-                    search_params['q'] += ' AND '
-                search_params['q'] += '(organization:%s' % c.group_dict.get('name')
-                for name in children:
-                    if name:
-                        search_params['q'] += ' OR organization:%s' %  name
-                search_params['q'] += ")"
-            # add it back to fields
-            c.fields += [('include_children','True')]
+            # fix the issues with multiple times repeated fields
+            # remove the param from the fields
+            new_fields = set()
+            for field,value in c.fields:
+                if (field != 'include_children'):
+                    new_fields.add((field,value))
+            c.fields = list(new_fields)
+
+            # parse the query string to check if children are requested
+            if query:
+                base_query = []
+                #  remove whitespaces between fields and values
+                query = re.sub(': +', ':',  query)
+                for item in query.split(' '):
+                    field = item.split(':')[0]
+                    value = item.split(':')[-1]
+                    # skip organization 
+                    if (field == 'owner_org'):
+                        org_id = value
+                        continue
+                    # skip include children andset option value
+                    if (field == 'include_children'):
+                        if (value.upper() != "FALSE"):
+                            c.include_children_selected = True
+                        continue
+                    base_query += [item]
+            if c.include_children_selected:
+                # add all the children organizations in an 'or' join
+                children = _children_name_list(helpers.group_tree_section(c.group_dict.get('id'), include_parents=False, include_siblings=False).get('children',[]))
+                if(children):
+                    search_params['q'] = " ".join(base_query)
+                    if (len(search_params['q'].strip())>0):
+                        search_params['q'] += ' AND '
+                    search_params['q'] += '(organization:%s' % c.group_dict.get('name')
+                    for name in children:
+                        if name:
+                            search_params['q'] += ' OR organization:%s' %  name
+                    search_params['q'] += ")"
+                # add it back to fields
+                c.fields += [('include_children','True')]
 
         return search_params
 
